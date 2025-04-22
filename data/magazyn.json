@@ -1,0 +1,38 @@
+{
+  "Truskawka": {
+    "img": "truskawka.jpg",
+    "rocznik": "03.2025",
+    "alk": "11%",
+    "ml": 750,
+    "ilosc": 10,
+    "smak": "P\u00f3\u0142s\u0142odkie",
+    "drozdze": "La Mancha"
+  },
+  "Malina": {
+    "img": "malina.jpg",
+    "rocznik": "04.2025",
+    "alk": "11%",
+    "ml": 750,
+    "ilosc": 10,
+    "smak": "P\u00f3\u0142s\u0142odkie",
+    "drozdze": "La Mancha"
+  },
+  "Dzika R\u00f3\u017ca": {
+    "img": "dzika_roza.jpg",
+    "rocznik": "12.2024",
+    "alk": "18%",
+    "ml": 750,
+    "ilosc": 10,
+    "smak": "P\u00f3\u0142s\u0142odkie",
+    "drozdze": "M N"
+  },
+  "Hibiskus": {
+    "img": "hibiskus.jpg",
+    "rocznik": "12.2024",
+    "alk": "18%",
+    "ml": 750,
+    "ilosc": 10,
+    "smak": "P\u00f3\u0142s\u0142odkie",
+    "drozdze": "M N "
+  }
+}
