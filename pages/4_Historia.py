@@ -67,30 +67,34 @@ wpisy_do_pokazania = filtr if sortuj_rosnaco else list(reversed(filtr))
 if tylko_blg:
     wpisy_do_pokazania = [w for w in wpisy_do_pokazania if "BLG" in w["opis"]]
 
+haslo = st.text_input("🔐 Wpisz hasło edycji:", type="password")
+haslo_poprawne = haslo == "gorzelnia25"
+
 if wpisy_do_pokazania:
     for i, wpis in enumerate(wpisy_do_pokazania):
-        st.markdown(f"""
-        📅 **{wpis['data']}**  
-        ✍️ {wpis['opis']}
-        """)
-        with st.expander("✏️ Edytuj wpis"):
-            e_data = st.date_input("📅 Data", value=datetime.strptime(wpis["data"], "%d.%m.%Y"), key=f"data_{i}")
-            e_opis = st.text_area("🧪 Opis", value=wpis["opis"], key=f"opis_{i}")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("💾 Zapisz zmiany", key=f"zapisz_{i}"):
-                    wpis["data"] = e_data.strftime("%d.%m.%Y")
-                    wpis["opis"] = e_opis
-                    save_historia(st.session_state["wpisy"])
-                    st.success("✅ Zmieniono wpis.")
-                    st.experimental_rerun()
-            with col2:
-                if st.button("🗑️ Usuń wpis", key=f"usun_{i}"):
-                    st.session_state["wpisy"].remove(wpis)
-                    save_historia(st.session_state["wpisy"])
-                    st.warning("❌ Wpis usunięty.")
-                    st.experimental_rerun()
-        st.markdown("---")
+        with st.container():
+            st.markdown(f"""
+                **📅 {wpis['data']}**  
+                ✍️ {wpis['opis']}
+            """)
+            if haslo_poprawne:
+                with st.expander("✏️ Edytuj wpis"):
+                    e_data = st.date_input("📅 Data", value=datetime.strptime(wpis["data"], "%d.%m.%Y"), key=f"data_{i}")
+                    e_opis = st.text_area("🧪 Opis", value=wpis["opis"], key=f"opis_{i}")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("💾 Zapisz zmiany", key=f"zapisz_{i}"):
+                            wpis["data"] = e_data.strftime("%d.%m.%Y")
+                            wpis["opis"] = e_opis
+                            save_historia(st.session_state["wpisy"])
+                            st.success("✅ Zmieniono wpis.")
+                            st.experimental_rerun()
+                    with col2:
+                        if st.button("🗑️ Usuń wpis", key=f"usun_{i}"):
+                            st.session_state["wpisy"].remove(wpis)
+                            save_historia(st.session_state["wpisy"])
+                            st.warning("❌ Wpis usunięty.")
+                            st.experimental_rerun()
 else:
     st.info("Brak wpisów do wyświetlenia.")
 
