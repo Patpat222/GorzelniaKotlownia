@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import json
 import os
+import subprocess
 
 st.set_page_config(page_title="Historia Przebiegu", page_icon="📜")
 st.title("📜 Historia przebiegu fermentacji")
@@ -18,10 +19,17 @@ def load_historia():
             return json.load(f)
     return []
 
-# 💾 Zapis danych
+# 📂 Zapis danych
 def save_historia(lista):
     with open(HISTORIA_FILE, "w") as f:
-        json.dump(lista, f, indent=2)
+        json.dump(lista, f, indent=2, ensure_ascii=False)
+    try:
+        subprocess.run(["git", "add", HISTORIA_FILE], check=True)
+        subprocess.run(["git", "commit", "-m", "Aktualizacja historii"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        st.success("🚀 Wpis zapisany i wysłany do GitHuba!")
+    except Exception as e:
+        st.warning(f"⚠️ Commit/push nieudany: {e}")
 
 if "wpisy" not in st.session_state:
     st.session_state["wpisy"] = load_historia()
@@ -83,14 +91,14 @@ if wpisy_do_pokazania:
                     e_opis = st.text_area("🧪 Opis", value=wpis["opis"], key=f"opis_{i}")
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("💾 Zapisz zmiany", key=f"zapisz_{i}"):
+                        if st.button("📎 Zapisz zmiany", key=f"zapisz_{i}"):
                             wpis["data"] = e_data.strftime("%d.%m.%Y")
                             wpis["opis"] = e_opis
                             save_historia(st.session_state["wpisy"])
                             st.success("✅ Zmieniono wpis.")
                             st.experimental_rerun()
                     with col2:
-                        if st.button("🗑️ Usuń wpis", key=f"usun_{i}"):
+                        if st.button("🚩 Usuń wpis", key=f"usun_{i}"):
                             st.session_state["wpisy"].remove(wpis)
                             save_historia(st.session_state["wpisy"])
                             st.warning("❌ Wpis usunięty.")
@@ -98,8 +106,8 @@ if wpisy_do_pokazania:
 else:
     st.info("Brak wpisów do wyświetlenia.")
 
-# 📝 Notatka do partii (tymczasowa)
-with st.expander("📝 Notatka do tej partii"):
+# 🗘️ Notatka do partii (tymczasowa)
+with st.expander("🗘️ Notatka do tej partii"):
     st.text_area("Dodatkowe uwagi lub plany (niedługo zrobimy zapis!)")
 
 # 📈 Wykres BLG

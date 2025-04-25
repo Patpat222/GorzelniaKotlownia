@@ -5,6 +5,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+import subprocess
 
 # Rejestracja czcionki z polskimi znakami
 pdfmetrics.registerFont(TTFont("DejaVu", "assets/DejaVuSans.ttf"))
@@ -16,15 +17,25 @@ PRZEPISY_FILE = "data/przepisy.json"
 PDF_DIR = "data/pdf"
 os.makedirs(PDF_DIR, exist_ok=True)
 
+
 def load_przepisy():
     if os.path.exists(PRZEPISY_FILE):
         with open(PRZEPISY_FILE, "r") as f:
             return json.load(f)
     return []
 
+
 def save_przepisy(lista):
     with open(PRZEPISY_FILE, "w") as f:
-        json.dump(lista, f, indent=2)
+        json.dump(lista, f, indent=2, ensure_ascii=False)
+    try:
+        subprocess.run(["git", "add", PRZEPISY_FILE], check=True)
+        subprocess.run(["git", "commit", "-m", "Aktualizacja przepisów"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        st.info("🚀 Zmiany zapisane w GitHubie")
+    except Exception as e:
+        st.warning(f"⚠️ Nie udało się wykonać push: {e}")
+
 
 def generuj_pdf(przepis):
     filename = f"{PDF_DIR}/{przepis['nazwa'].replace(' ', '_')}.pdf"
@@ -37,9 +48,9 @@ def generuj_pdf(przepis):
     y -= 30
 
     c.setFont("DejaVu", 12)
-    c.drawString(50, y, f"🍬 Styl: {przepis.get('styl', '-')}")
+    c.drawString(50, y, f"🍬 Styl: {przepis.get('styl', '-')}" )
     y -= 20
-    c.drawString(50, y, f"🍇 Kolor: {przepis.get('kolor', '-')}")
+    c.drawString(50, y, f"🍇 Kolor: {przepis.get('kolor', '-')}" )
     y -= 30
 
     c.setFont("DejaVu", 13)
@@ -69,6 +80,7 @@ def generuj_pdf(przepis):
 
     c.save()
     return filename
+
 
 if "przepisy" not in st.session_state:
     st.session_state["przepisy"] = load_przepisy()
@@ -131,7 +143,6 @@ if przepisy_do_wyswietlenia:
         st.markdown(f"**🍬 Styl:** {przepis.get('styl', '-')}")
         st.markdown(f"**🍇 Kolor:** {przepis.get('kolor', '-')}")
 
-        # 📥 PDF
         if st.button(f"📥 Pobierz jako PDF", key=f"pdf_{i}"):
             pdf_path = generuj_pdf(przepis)
             with open(pdf_path, "rb") as f:
@@ -142,7 +153,6 @@ if przepisy_do_wyswietlenia:
                     mime="application/pdf"
                 )
 
-        # ✏️ Edycja w expanderze
         with st.expander("✏️ Edytuj przepis"):
             e_nazwa = st.text_input("🍷 Nazwa", value=przepis["nazwa"], key=f"nazwa_{i}")
             e_skladniki = st.text_area("📋 Składniki", value="\n".join(przepis["skladniki"]), key=f"skl_{i}")

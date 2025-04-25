@@ -6,7 +6,9 @@ import random
 import json
 import time
 import os
+from datetime import datetime
 from streamlit_extras.switch_page_button import switch_page
+import subprocess
 
 # === USTAWIENIA ===
 INTRO_TIME = 3
@@ -24,7 +26,7 @@ CITATY = [
 ]
 
 # === LOGO W TLE ===
-def get_base64_logo_overlay(path, opacity=0.2):
+def get_base64_logo_overlay(path, opacity=0.15):
     img = Image.open(path).convert("RGBA")
     img = Image.blend(Image.new("RGBA", img.size, (255,255,255,0)), img, opacity)
     buffered = io.BytesIO()
@@ -39,44 +41,29 @@ st.markdown(f"""
     <style>
     .stApp {{
         background-image: url("data:image/png;base64,{logo_base64}");
-        background-size: contain;
+        background-size: cover;
         background-repeat: no-repeat;
-        background-position: top center;
+        background-position: center center;
         font-family: 'Georgia', serif;
         color: #f2e8d5;
     }}
     h1, h4 {{ text-align: center; }}
-
-    /* ZAMIANA TUTAJ 👇 */
     .stButton > button {{
-        width: 120px;
-        height: 60px;
+        width: 100%;
+        min-width: 90px;
+        height: 50px;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.08);  /* przezroczysty */
+        background: rgba(255, 255, 255, 0.08);
         color: #f2e8d5;
         font-size: 0.85rem;
         border: 1px solid rgba(255, 255, 255, 0.2);
         cursor: pointer;
-        margin-bottom: 10px;
         transition: all 0.3s ease;
     }}
     .stButton > button:hover {{
         background: rgba(255, 255, 255, 0.2);
         transform: scale(1.05);
         box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-    }}
-
-    .wine-gallery {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 1.5rem;
-        margin-top: 2rem;
-    }}
-    .wine-card {{
-        background: rgba(255,255,255,0.05);
-        padding: 1rem;
-        border-radius: 12px;
-        text-align: center;
     }}
     .note-box {{
         background-color: rgba(255,255,255,0.08);
@@ -86,7 +73,6 @@ st.markdown(f"""
     }}
     </style>
 """, unsafe_allow_html=True)
-
 
 # === INTRO ===
 if "intro_played" not in st.session_state:
@@ -106,53 +92,47 @@ nav = [
     ("📖 Przepisy", "2_Przepisy.py"),
     ("🍯 Magazyn", "3_Magazyn.py"),
     ("📜 Historia", "4_Historia.py"),
-    ("📏Przelicznik", "5_Przelicznik.py"),
+    ("📏 Przelicznik", "5_Przelicznik.py"),
     ("🍾 Butelki", "6_Butelki.py"),
-    ("⚗️Kalkulator winiarski", "7_Kalkulator_winiarski.py"),
+    ("⚗️ Kalkulator winiarski", "7_Kalkulator_winiarski.py"),
     ("💬 Opinie", "10_Opinie.py"),
     ("🖼️ Galeria", "11_Galeria.py"),
     ("📔 Notatki", "8_Notatki.py"),
     ("🏷️ Etykiety", "9_Etykiety.py"),
-    ("🧪Wstawione", "12_Wstawione.py")
+    ("🧪 Wstawione", "12_Wstawione.py")
 ]
 
-rows = [nav[i:i+6] for i in range(0, len(nav), 6)]
-for row in rows:
-    cols = st.columns(6)
+for row in [nav[i:i+3] for i in range(0, len(nav), 3)]:
+    cols = st.columns(3)
     for col, (label, page) in zip(cols, row):
         with col:
             if st.button(label, key=label):
                 st.switch_page(f"pages/{page}")
 
-# === GALERIA WIN ===
+# === DOSTĘPNE WINA ===
 if os.path.exists("data/magazyn.json"):
     with open("data/magazyn.json", encoding="utf-8") as f:
         magazyn = json.load(f)
 
-    st.markdown("### 🍶 Dostępne wina w magazynie")
+        st.markdown("### 🍶 Dostępne wina w magazynie")
+        for nazwa, dane in magazyn.items():
+            img = dane.get("img", "")
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if img and os.path.exists(f"assets/{img}"):
+                    st.image(f"assets/{img}", use_container_width=True)
+                else:
+                    st.warning("📷 Brak obrazka")
+            with col2:
+                if st.button(nazwa, key=nazwa):
+                    st.switch_page("pages/3_Magazyn.py")
+                st.markdown(f"📦 **{dane.get('ilosc', 0)} butelek**")
+                st.markdown(f"🍬 Styl: `{dane.get('smak', '-')}`")
+                st.markdown(f"💥 Alk: `{dane.get('alk', '-')}`")
 
-    for nazwa, dane in magazyn.items():
-        img = dane.get("img", "")
-        if img:
-            with st.container():
-                col1, col2 = st.columns([1, 2])
-                with col1:
-                    st.image(f"assets/{img}", width=120)
-                with col2:
-                    if st.button(nazwa, key=nazwa):
-                        st.switch_page("pages/3_Magazyn.py")
-                    st.markdown(f"📦 **{dane.get('ilosc', 0)} butelek**")
-                    st.markdown(f"🍬 Styl: `{dane.get('smak', '-')}`")
-                    st.markdown(f"💥 Alk: `{dane.get('alk', '-')}`")
-
-# == Opinia tygodnia ==
-
-# === Wczytaj dane ===
+# === OPINIA TYGODNIA ===
 with open("data/opinie.json", "r", encoding="utf-8") as f:
     opinie_data = json.load(f)
-
-with open("data/historia.json", "r", encoding="utf-8") as f:
-    historia_data = json.load(f)
 
 st.markdown("### 💬 Opinia tygodnia")
 if opinie_data:
@@ -162,67 +142,55 @@ if opinie_data:
     autor = opinia.get("autor", "anonim")
     st.info(f"🍇 **{wino}** – „{komentarz}” – _{autor}_")
 
-# == Historia fermentacji ==
+# === HISTORIA ===
+with open("data/historia.json", "r", encoding="utf-8") as f:
+    historia_data = json.load(f)
+
 st.markdown("### 🕘 Ostatnie wydarzenia fermentacji")
 historia_sorted = sorted(historia_data, key=lambda x: x.get("data", ""), reverse=True)[:3]
 for e in historia_sorted:
-    data = e.get("data", "brak daty")
-    opis = e.get("opis", "brak opisu")
-    st.write(f"📌 `{data}` – {opis}")
-
+    st.write(f"📌 `{e.get('data', '-')}` – {e.get('opis', '-')}")
 
 # === NOTATKA ===
-import json
-from datetime import datetime
-
-st.markdown("### 🍃 Dodaj notatkę")
-
 NOTATKI_FILE = "data/notatki.json"
 os.makedirs("data", exist_ok=True)
-
-# Wczytaj istniejące notatki
 if os.path.exists(NOTATKI_FILE):
     with open(NOTATKI_FILE, "r") as f:
         notatki = json.load(f)
 else:
     notatki = []
 
-# Formularz
+st.markdown("### 🍃 Dodaj notatkę")
 with st.form("notka"):
     tytul = st.text_input("Tytuł notatki")
     tresc = st.text_area("Treść notatki")
     submitted = st.form_submit_button("Zapisz notatkę")
-
     if submitted:
         if tytul and tresc:
-            nowa = {
-                "tytul": tytul,
-                "tresc": tresc,
-                "data": datetime.now().strftime("%d.%m.%Y %H:%M")
-            }
+            nowa = {"tytul": tytul, "tresc": tresc, "data": datetime.now().strftime("%d.%m.%Y %H:%M")}
             notatki.append(nowa)
             with open(NOTATKI_FILE, "w", encoding="utf-8") as f:
                 json.dump(notatki, f, indent=2, ensure_ascii=False)
+            subprocess.run(["git", "add", NOTATKI_FILE])
+            subprocess.run(["git", "commit", "-m", "Aktualizacja notatek"])
+            subprocess.run(["git", "push"])
             st.success("✅ Notatka została zapisana.")
         else:
             st.warning("⚠️ Wpisz zarówno tytuł, jak i treść.")
 
-#MEMMMYYYY
-st.markdown("## Kociołek prawdy")
-st.caption("Trochę humoru z piwnicy – tak dla równowagi fermentacyjnej 🍷")
+import subprocess  # Do GitHub push
 
-os.makedirs("uploaded_memes", exist_ok=True)
 MEME_META_FILE = "data/memy.json"
-os.makedirs("data", exist_ok=True)
+os.makedirs("uploaded_memes", exist_ok=True)
 
-# === Wczytaj opisy memów ===
+# === Wczytaj memy ===
 if os.path.exists(MEME_META_FILE):
     with open(MEME_META_FILE, "r", encoding="utf-8") as f:
         memy = json.load(f)
 else:
     memy = {}
 
-# === Dodawanie mema (bez hasła) ===
+# === Dodawanie nowego mema ===
 with st.expander("➕ Dodaj własnego mema z cytatem"):
     uploaded = st.file_uploader("📸 Wybierz obrazek (meme)", type=["png", "jpg", "jpeg"])
     podpis = st.text_input("✍️ Śmieszny cytat do mema")
@@ -231,13 +199,24 @@ with st.expander("➕ Dodaj własnego mema z cytatem"):
         file_path = os.path.join("uploaded_memes", uploaded.name)
         with open(file_path, "wb") as f:
             f.write(uploaded.read())
+
         memy[uploaded.name] = podpis
         with open(MEME_META_FILE, "w", encoding="utf-8") as f:
             json.dump(memy, f, indent=2, ensure_ascii=False)
+
+        # PUSH do GitHuba
+        try:
+            subprocess.run(["git", "add", MEME_META_FILE], check=True)
+            subprocess.run(["git", "commit", "-m", f"Dodano mema {uploaded.name}"], check=True)
+            subprocess.run(["git", "push"], check=True)
+            st.info("🚀 Memy wysłane do GitHuba.")
+        except Exception as e:
+            st.warning(f"⚠️ Push nieudany: {e}")
+
         st.success("✅ Dodano mema z cytatem! Odśwież stronę by go zobaczyć.")
         st.experimental_rerun()
 
-# === Pokaz memy ===
+# === Wyświetlanie memów ===
 if memy:
     st.markdown("### 🎞️ Galeria memów z kotłowni")
 
@@ -245,17 +224,32 @@ if memy:
         st.session_state["wybrany_mem"] = random.choice(list(memy.keys()))
 
     wybrane = st.selectbox("📂 Wybierz mem:", list(memy.keys()), index=list(memy.keys()).index(st.session_state["wybrany_mem"]))
-    st.image(f"uploaded_memes/{wybrane}", caption=f"🍇 {memy[wybrane]}", use_container_width=True)
+    plik = f"uploaded_memes/{wybrane}"
 
-    # Usuwanie mema – z hasłem
+    if os.path.exists(plik):
+        st.image(plik, caption=f"🍇 {memy[wybrane]}", use_container_width=True)
+    else:
+        st.warning("❌ Obrazek nie został znaleziony – prawdopodobnie został usunięty z dysku.")
+
+    # Usuwanie mema – tylko z hasłem
     with st.expander("🗑️ Usuń ten mem"):
         haslo_usun = st.text_input("Podaj hasło do usunięcia:", type="password", key="usun_mema")
         if haslo_usun == "gorzelnia25":
             if st.button("❌ Potwierdź usunięcie"):
-                os.remove(f"uploaded_memes/{wybrane}")
+                if os.path.exists(plik):
+                    os.remove(plik)
                 memy.pop(wybrane)
                 with open(MEME_META_FILE, "w", encoding="utf-8") as f:
                     json.dump(memy, f, indent=2, ensure_ascii=False)
+
+                try:
+                    subprocess.run(["git", "add", MEME_META_FILE], check=True)
+                    subprocess.run(["git", "commit", "-m", f"Usunięto mema {wybrane}"], check=True)
+                    subprocess.run(["git", "push"], check=True)
+                    st.info("🚀 Usunięcie zapisane w GitHubie.")
+                except Exception as e:
+                    st.warning(f"⚠️ Push nieudany: {e}")
+
                 st.success("✅ Mem został usunięty.")
                 st.experimental_rerun()
         elif haslo_usun:

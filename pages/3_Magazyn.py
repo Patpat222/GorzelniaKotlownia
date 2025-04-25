@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import json
+import subprocess
 
 st.set_page_config(page_title="Magazyn Win", page_icon="🍾")
 st.title("🍾 Magazyn Gorzelniany")
@@ -16,7 +17,14 @@ def load_magazyn():
 
 def save_magazyn(magazyn):
     with open(MAGAZYN_FILE, "w") as f:
-        json.dump(magazyn, f, indent=2)
+        json.dump(magazyn, f, indent=2, ensure_ascii=False)
+    try:
+        subprocess.run(["git", "add", MAGAZYN_FILE], check=True)
+        subprocess.run(["git", "commit", "-m", "Aktualizacja magazynu"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        st.info("🚀 Zmiany zapisane w GitHubie")
+    except Exception as e:
+        st.warning(f"⚠️ Nie udało się wykonać push: {e}")
 
 if "magazyn" not in st.session_state:
     st.session_state["magazyn"] = load_magazyn()
@@ -47,32 +55,31 @@ st.divider()
 
 # === WIZUALNY MAGAZYN ===
 for nazwa, dane in list(st.session_state["magazyn"].items()):
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.image(f"assets/{dane['img']}", width=150)
-    with col2:
-        st.markdown(f"### {nazwa}")
-        st.markdown(f"📅 Rocznik: `{dane.get('rocznik', '-')}`")
-        st.markdown(f"🍷 Alkohol: `{dane.get('alk', '-')}`")
-        st.markdown(f"🧪 Objętość: `{dane.get('ml', '-')} ml`")
-        st.markdown(f"🧫 Drożdże: `{dane.get('drozdze', '-')}`")
-        st.markdown(f"🍬 Styl: `{dane.get('smak', '-')}`")
-        st.markdown(f"📦 Na stanie: **{dane.get('ilosc', 0)} butelek**")
+    with st.container():
+        st.markdown(f"## {nazwa}")
+        col1, col2 = st.columns([1, 2], gap="large")
 
-        # 🟡 / 🔴 Komunikaty
-        if dane["ilosc"] == 1:
-            st.warning("🟡 Ostatnia butelka!")
-        elif dane["ilosc"] == 0:
-            st.error("🔴 Brak w magazynie!")
+        with col1:
+            st.image(f"assets/{dane['img']}", use_container_width=True)
 
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
+        with col2:
+            st.markdown(f"📅 Rocznik: `{dane.get('rocznik', '-')}`")
+            st.markdown(f"🍷 Alkohol: `{dane.get('alk', '-')}`")
+            st.markdown(f"🧪 Objętość: `{dane.get('ml', '-')} ml`")
+            st.markdown(f"🧫 Drożdże: `{dane.get('drozdze', '-')}`")
+            st.markdown(f"🍬 Styl: `{dane.get('smak', '-')}`")
+            st.markdown(f"📦 Na stanie: **{dane.get('ilosc', 0)} butelek**")
+
+            if dane["ilosc"] == 1:
+                st.warning("🟡 Ostatnia butelka!")
+            elif dane["ilosc"] == 0:
+                st.error("🔴 Brak w magazynie!")
+
             if st.button(f"➖ Wziąłem 1", key=f"{nazwa}_wez"):
                 if dane["ilosc"] > 0:
                     dane["ilosc"] -= 1
                     save_magazyn(st.session_state["magazyn"])
 
-        with col_btn2:
             with st.expander("✏️ Edytuj / Usuń"):
                 nowe_img = st.text_input(f"🖼️ Zdjęcie ({nazwa})", value=dane["img"], key=f"{nazwa}_img")
                 nowe_rocznik = st.text_input(f"📅 Rocznik", value=dane["rocznik"], key=f"{nazwa}_roc")

@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import subprocess
 from datetime import datetime
 
 st.set_page_config(page_title="Wstawione Wina", page_icon="🧪")
@@ -15,6 +16,18 @@ if os.path.exists(FILE_PATH):
         wstawione = json.load(f)
 else:
     wstawione = []
+
+# === Zapis z automatycznym pushowaniem ===
+def save_wstawione(data):
+    with open(FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        subprocess.run(["git", "add", FILE_PATH], check=True)
+        subprocess.run(["git", "commit", "-m", "Aktualizacja wstawionych win"], check=True)
+        subprocess.run(["git", "push"], check=True)
+        st.info("🚀 Zmiany wysłane na GitHuba")
+    except Exception as e:
+        st.warning(f"⚠️ Nie udało się wykonać push: {e}")
 
 # === Dodawanie nowego wina ===
 st.subheader("➕ Dodaj nowe wino")
@@ -39,8 +52,7 @@ if st.button("✅ Zapisz wino"):
             "status": status,
             "uwagi": uwagi
         })
-        with open(FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(wstawione, f, indent=2, ensure_ascii=False)
+        save_wstawione(wstawione)
         st.success("🍷 Wino dodane do dziennika!")
         st.rerun()
     else:
@@ -61,8 +73,7 @@ if wstawione:
 
             if st.button(f"🗑️ Usuń ({w['nazwa']})", key=f"usun_{i}"):
                 wstawione.pop(i)
-                with open(FILE_PATH, "w", encoding="utf-8") as f:
-                    json.dump(wstawione, f, indent=2, ensure_ascii=False)
+                save_wstawione(wstawione)
                 st.success("🗑️ Wpis usunięty")
                 st.rerun()
 else:

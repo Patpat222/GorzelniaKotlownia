@@ -3,7 +3,8 @@ import os
 import json
 from datetime import date
 from PIL import Image
-#Na życzenie michała zrobione :)
+import subprocess
+
 st.set_page_config(page_title="Galeria", page_icon="📸")
 st.title("📸 Galeria")
 
@@ -17,6 +18,16 @@ if os.path.exists(BAZA):
         galeria = json.load(f)
 else:
     galeria = []
+
+# === Funkcja do pushowania do Git ===
+def push_to_github(file_path, message):
+    try:
+        subprocess.run(["git", "add", file_path], check=True)
+        subprocess.run(["git", "commit", "-m", message], check=True)
+        subprocess.run(["git", "push"], check=True)
+        st.info("🚀 Galeria zaktualizowana w repozytorium GitHub!")
+    except Exception as e:
+        st.warning(f"⚠️ Nie udało się wykonać push: {e}")
 
 # === Formularz dodawania ===
 st.markdown("### ➕ Dodaj nowe zdjęcie")
@@ -40,6 +51,7 @@ with st.form("dodaj_zdjecie"):
         with open(BAZA, "w") as f:
             json.dump(galeria, f, indent=2)
 
+        push_to_github(BAZA, f"Dodano zdjęcie: {opis}")
         st.success("✅ Zdjęcie dodane do galerii!")
 
 # === Filtrowanie ===
@@ -96,6 +108,7 @@ if filtered:
                     with open(BAZA, "w") as f:
                         json.dump(galeria, f, indent=2)
                     os.remove(os.path.join(FOLDER, plik))
+                    push_to_github(BAZA, f"Usunięto zdjęcie: {plik}")
                     st.success("🗑️ Zdjęcie zostało usunięte")
                     st.session_state.current_slide = 0
                     st.rerun()

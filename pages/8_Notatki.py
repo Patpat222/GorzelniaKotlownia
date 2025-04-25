@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import json
 from datetime import datetime
+from utils.git_sync import push_to_github
 
 st.set_page_config(page_title="Kącik notatek winiarza", page_icon="📓")
 st.title(" 📓 Kącik notatek winiarza")
@@ -28,6 +29,7 @@ if st.button("✍️ Zapisz notatkę"):
         with open(NOTATKI_FILE, "w") as f:
             json.dump(notatki, f, indent=2)
         st.success("✅ Notatka zapisana!")
+        st.info(push_to_github(f"📝 Nowa notatka: {tytul}"))
         st.rerun()
     else:
         st.warning("⚠️ Uzupełnij tytuł i treść notatki")
@@ -45,6 +47,7 @@ if notatki:
                 with open(NOTATKI_FILE, "w") as f:
                     json.dump(notatki, f, indent=2)
                 st.success("🗑️ Notatka usunięta")
+                st.info(push_to_github("🗑️ Usunięto notatkę"))
                 st.rerun()
 else:
     st.info("Brak notatek. Czas coś zapisać! 🍷")
