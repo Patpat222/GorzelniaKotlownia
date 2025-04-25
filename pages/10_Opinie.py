@@ -93,3 +93,8 @@ if srednie_oceny:
     st.pyplot(fig)
 else:
     st.info("Brak ocen do wyświetlenia.")
+from utils.git_sync import push_to_github
+
+# ... po zapisaniu danych
+st.success("✅ Opinia została zapisana.")
+st.info(push_to_github("🗣️ Dodano opinię przez użytkownika"))
