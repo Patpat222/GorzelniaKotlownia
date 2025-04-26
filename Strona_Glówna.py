@@ -130,6 +130,8 @@ if os.path.exists("data/magazyn.json"):
                 st.markdown(f"🍬 Styl: `{dane.get('smak', '-')}`")
                 st.markdown(f"💥 Alk: `{dane.get('alk', '-')}`")
 
+
+#o chuj chodzi czemu to nie działa
 # === OPINIA TYGODNIA ===
 with open("data/opinie.json", "r", encoding="utf-8") as f:
     opinie_data = json.load(f)
