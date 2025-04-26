@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import json
 from PIL import Image
-from datetime import date
+from datetime import date, datetime
 import subprocess
 
 # === USTAWIENIA ===
@@ -21,8 +21,6 @@ else:
     galeria = []
 
 # === SORTOWANIE PO DACIE (najświeższe najpierw) ===
-from datetime import datetime
-
 def parse_date(entry):
     try:
         return datetime.strptime(entry.get("data", "01.01.1970"), "%d.%m.%Y")
@@ -76,14 +74,14 @@ if galeria:
     with nav[0]:
         if st.button("⬅️", key="prev") and index > 0:
             st.session_state.galeria_index -= 1
-            st.experimental_rerun()
+            st.rerun()
     with nav[2]:
         if st.button("➡️", key="next") and index < len(galeria) - 1:
             st.session_state.galeria_index += 1
-            st.experimental_rerun()
+            st.rerun()
 
     if os.path.exists(plik):
-        st.image(plik, use_column_width=True, output_format="PNG")
+        st.image(plik, use_container_width=True, output_format="PNG")
     else:
         st.warning("❌ Obrazek nie został znaleziony.")
 
@@ -93,7 +91,7 @@ if galeria:
     )
 
     # === USUWANIE ===
-    with st.expander("🪜 Usuń to zdjęcie"):
+    with st.expander("🧹 Usuń to zdjęcie"):
         haslo = st.text_input("Podaj hasło", type="password")
         if haslo == HASLO_USUWANIA:
             if st.button("❌ Potwierdź usunięcie"):
@@ -114,7 +112,7 @@ if galeria:
 
                 st.success("✅ Zdjęcie zostało usunięte.")
                 st.session_state.galeria_index = max(0, index - 1)
-                st.experimental_rerun()
+                st.rerun()
         elif haslo:
             st.error("❌ Nieprawidłowe hasło.")
 else:
@@ -124,7 +122,7 @@ else:
 with st.expander("➕ Dodaj nowe zdjęcie"):
     uploaded = st.file_uploader("📸 Wybierz zdjęcie", type=["png", "jpg", "jpeg"])
     tytul = st.text_input("📄 Tytuł zdjęcia", max_chars=50)
-    data_zdjecia = st.date_input("🗓️ Data zdjęcia", value=date.today(), format="DD.MM.YYYY")
+    data_zdjecia = st.date_input("📅 Data zdjęcia", value=date.today(), format="DD.MM.YYYY")
 
     if uploaded and tytul:
         filename = uploaded.name.replace(" ", "_")
@@ -152,7 +150,7 @@ with st.expander("➕ Dodaj nowe zdjęcie"):
             st.warning(f"⚠️ Push nieudany: {e}")
 
         st.success("✅ Zdjęcie zostało dodane!")
-        st.experimental_rerun()
+        st.rerun()
 
 # === STOPKA ===
 st.markdown("---")
