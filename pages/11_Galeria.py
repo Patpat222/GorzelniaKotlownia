@@ -5,7 +5,7 @@ from PIL import Image
 from datetime import date
 import subprocess
 
-# === ŚCIEŻKI I USTAWIENIA ===
+# === USTAWIENIA ===
 GALERIA_DIR = "galeria"
 GALERIA_META = "data/galeria.json"
 HASLO_USUWANIA = "gorzelnia25"
@@ -13,12 +13,27 @@ HASLO_USUWANIA = "gorzelnia25"
 os.makedirs(GALERIA_DIR, exist_ok=True)
 os.makedirs("data", exist_ok=True)
 
-# === Wczytaj metadane ===
+# === WCZYTYWANIE ZDJĘĆ ===
 if os.path.exists(GALERIA_META):
     with open(GALERIA_META, encoding="utf-8") as f:
         galeria = json.load(f)
 else:
     galeria = []
+
+# === SORTOWANIE PO DACIE (najświeższe najpierw) ===
+from datetime import datetime
+
+def parse_date(entry):
+    try:
+        return datetime.strptime(entry.get("data", "01.01.1970"), "%d.%m.%Y")
+    except:
+        return datetime(1970, 1, 1)
+
+galeria.sort(key=parse_date, reverse=True)
+
+# === STAN: index aktywnego zdjęcia ===
+if "galeria_index" not in st.session_state:
+    st.session_state.galeria_index = 0
 
 # === CSS ===
 st.markdown("""
@@ -32,27 +47,25 @@ st.markdown("""
     .caption {
         text-align: center;
         font-style: italic;
-        font-size: 0.9rem;
-        color: #ccc;
+        font-size: 0.95rem;
+        color: #ddd;
+        margin-top: 0.5rem;
         margin-bottom: 1rem;
     }
     .arrow-btn > button {
-        font-size: 1.5rem !important;
-        padding: 8px;
+        font-size: 2rem !important;
         width: 100%;
         height: 100%;
+        padding: 0.25rem;
+        border-radius: 12px;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # === TYTUŁ ===
-st.markdown("## 🖼️ Zdjęcia")
+st.markdown("## 🌞 Galeria Zdjęć")
 
-# === STAN: które zdjęcie aktualnie
-if "galeria_index" not in st.session_state:
-    st.session_state.galeria_index = 0
-
-# === Galeria główna
+# === WYŚWIETLANIE ===
 if galeria:
     index = st.session_state.galeria_index
     index = max(0, min(index, len(galeria) - 1))
@@ -70,20 +83,20 @@ if galeria:
             st.experimental_rerun()
 
     if os.path.exists(plik):
-        st.image(plik, use_column_width=True, output_format="PNG", caption=None)
+        st.image(plik, use_column_width=True, output_format="PNG")
     else:
         st.warning("❌ Obrazek nie został znaleziony.")
 
     st.markdown(
-        f"<div class='caption'>{zdjecie['tytul']} ({zdjecie['data']})</div>",
+        f"<div class='caption'>{zdjecie.get('tytul', 'Bez tytułu')} ({zdjecie.get('data', 'brak daty')})</div>",
         unsafe_allow_html=True
     )
 
-    # === Usuń zdjęcie
-    with st.expander("🧹 Usuń to zdjęcie"):
+    # === USUWANIE ===
+    with st.expander("🪜 Usuń to zdjęcie"):
         haslo = st.text_input("Podaj hasło", type="password")
         if haslo == HASLO_USUWANIA:
-            if st.button("❌ Usuń zdjęcie permanentnie"):
+            if st.button("❌ Potwierdź usunięcie"):
                 try:
                     os.remove(plik)
                 except FileNotFoundError:
@@ -94,9 +107,8 @@ if galeria:
 
                 try:
                     subprocess.run(["git", "add", "."], check=True)
-                    subprocess.run(["git", "commit", "-m", f"Usunięto zdjęcie {zdjecie['plik']}"], check=True)
+                    subprocess.run(["git", "commit", "-m", f"Usunięto zdjęcie {zdjecie['plik']}", "--allow-empty"], check=True)
                     subprocess.run(["git", "push"], check=True)
-                    st.info("✅ Usunięcie zapisane w GitHubie.")
                 except Exception as e:
                     st.warning(f"⚠️ Push nieudany: {e}")
 
@@ -106,46 +118,42 @@ if galeria:
         elif haslo:
             st.error("❌ Nieprawidłowe hasło.")
 else:
-    st.info("📭 Brak zdjęć w galerii.")
+    st.info("📅 Brak zdjęć w galerii.")
 
-# === Dodaj nowe zdjęcie ===
-with st.expander("➕ Dodaj nowe zdjęcie do galerii"):
+# === DODAWANIE ===
+with st.expander("➕ Dodaj nowe zdjęcie"):
     uploaded = st.file_uploader("📸 Wybierz zdjęcie", type=["png", "jpg", "jpeg"])
-    tytul = st.text_input("📝 Tytuł zdjęcia", max_chars=40)
-    data_zdjecia = st.date_input("📅 Data", value=date.today(), format="DD.MM.YYYY")
+    tytul = st.text_input("📄 Tytuł zdjęcia", max_chars=50)
+    data_zdjecia = st.date_input("🗓️ Data zdjęcia", value=date.today(), format="DD.MM.YYYY")
 
     if uploaded and tytul:
         filename = uploaded.name.replace(" ", "_")
         save_path = os.path.join(GALERIA_DIR, filename)
 
-        # Zapisz plik
+        # zapisz zdjęcie
         with open(save_path, "wb") as f:
             f.write(uploaded.read())
 
-        # Dodaj do listy
         galeria.append({
             "plik": filename,
             "tytul": tytul,
             "data": data_zdjecia.strftime("%d.%m.%Y")
         })
 
-        # Zapisz JSON
         with open(GALERIA_META, "w", encoding="utf-8") as f:
             json.dump(galeria, f, indent=2, ensure_ascii=False)
 
-        # Git push
         try:
             subprocess.run(["git", "add", "."], check=True)
-            subprocess.run(["git", "commit", "-m", f"Dodano zdjęcie {filename}"], check=True)
+            subprocess.run(["git", "commit", "-m", f"Dodano zdjęcie {filename}", "--allow-empty"], check=True)
             subprocess.run(["git", "push"], check=True)
-            st.info("🚀 Zdjęcie zapisane w GitHubie.")
+            st.info("🚀 Zdjęcie zapisane w repozytorium GitHub.")
         except Exception as e:
             st.warning(f"⚠️ Push nieudany: {e}")
 
-        st.success("✅ Zdjęcie zostało dodane.")
+        st.success("✅ Zdjęcie zostało dodane!")
         st.experimental_rerun()
 
 # === STOPKA ===
 st.markdown("---")
 st.markdown("<p style='text-align:center;'>© 2025 <b>PWNTRIX</b> – Gorzelnia Kotłownia</p>", unsafe_allow_html=True)
-#działa?
