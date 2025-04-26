@@ -1,119 +1,150 @@
 import streamlit as st
 import os
 import json
-from datetime import date
 from PIL import Image
+from datetime import date
 import subprocess
 
-st.set_page_config(page_title="Galeria", page_icon="📸")
-st.title("📸 Galeria")
+# === ŚCIEŻKI I USTAWIENIA ===
+GALERIA_DIR = "galeria"
+GALERIA_META = "data/galeria.json"
+HASLO_USUWANIA = "gorzelnia25"
 
-FOLDER = "data/zdjecia"
-BAZA = "data/galeria.json"
-os.makedirs(FOLDER, exist_ok=True)
+os.makedirs(GALERIA_DIR, exist_ok=True)
+os.makedirs("data", exist_ok=True)
 
-# === Wczytywanie bazy ===
-if os.path.exists(BAZA):
-    with open(BAZA, "r") as f:
+# === Wczytaj metadane ===
+if os.path.exists(GALERIA_META):
+    with open(GALERIA_META, encoding="utf-8") as f:
         galeria = json.load(f)
 else:
     galeria = []
 
-# === Funkcja do pushowania do Git ===
-def push_to_github(file_path, message):
-    try:
-        subprocess.run(["git", "add", file_path], check=True)
-        subprocess.run(["git", "commit", "-m", message], check=True)
-        subprocess.run(["git", "push"], check=True)
-        st.info("🚀 Galeria zaktualizowana w repozytorium GitHub!")
-    except Exception as e:
-        st.warning(f"⚠️ Nie udało się wykonać push: {e}")
+# === CSS ===
+st.markdown("""
+    <style>
+    .gallery-img {
+        border-radius: 12px;
+        max-width: 100%;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    }
+    .caption {
+        text-align: center;
+        font-style: italic;
+        font-size: 0.9rem;
+        color: #ccc;
+        margin-bottom: 1rem;
+    }
+    .arrow-btn > button {
+        font-size: 1.5rem !important;
+        padding: 8px;
+        width: 100%;
+        height: 100%;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# === Formularz dodawania ===
-st.markdown("### ➕ Dodaj nowe zdjęcie")
-with st.form("dodaj_zdjecie"):
-    zdjecie = st.file_uploader("Wybierz zdjęcie wina", type=["jpg", "jpeg", "png"])
-    opis = st.text_input("Opis lub nazwa partii")
-    data_zdjecia = st.date_input("Data zdjęcia", value=date.today())
-    dodaj = st.form_submit_button("📤 Dodaj do galerii")
+# === TYTUŁ ===
+st.markdown("## 🖼️ Zdjęcia")
 
-    if dodaj and zdjecie:
-        nazwa_pliku = zdjecie.name.replace(" ", "_")
-        sciezka = os.path.join(FOLDER, nazwa_pliku)
-        with open(sciezka, "wb") as f:
-            f.write(zdjecie.getbuffer())
+# === STAN: które zdjęcie aktualnie
+if "galeria_index" not in st.session_state:
+    st.session_state.galeria_index = 0
 
+# === Galeria główna
+if galeria:
+    index = st.session_state.galeria_index
+    index = max(0, min(index, len(galeria) - 1))
+    zdjecie = galeria[index]
+    plik = os.path.join(GALERIA_DIR, zdjecie["plik"])
+
+    nav = st.columns([1, 6, 1])
+    with nav[0]:
+        if st.button("⬅️", key="prev") and index > 0:
+            st.session_state.galeria_index -= 1
+            st.experimental_rerun()
+    with nav[2]:
+        if st.button("➡️", key="next") and index < len(galeria) - 1:
+            st.session_state.galeria_index += 1
+            st.experimental_rerun()
+
+    if os.path.exists(plik):
+        st.image(plik, use_column_width=True, output_format="PNG", caption=None)
+    else:
+        st.warning("❌ Obrazek nie został znaleziony.")
+
+    st.markdown(
+        f"<div class='caption'>{zdjecie['tytul']} ({zdjecie['data']})</div>",
+        unsafe_allow_html=True
+    )
+
+    # === Usuń zdjęcie
+    with st.expander("🧹 Usuń to zdjęcie"):
+        haslo = st.text_input("Podaj hasło", type="password")
+        if haslo == HASLO_USUWANIA:
+            if st.button("❌ Usuń zdjęcie permanentnie"):
+                try:
+                    os.remove(plik)
+                except FileNotFoundError:
+                    pass
+                galeria.pop(index)
+                with open(GALERIA_META, "w", encoding="utf-8") as f:
+                    json.dump(galeria, f, indent=2, ensure_ascii=False)
+
+                try:
+                    subprocess.run(["git", "add", "."], check=True)
+                    subprocess.run(["git", "commit", "-m", f"Usunięto zdjęcie {zdjecie['plik']}"], check=True)
+                    subprocess.run(["git", "push"], check=True)
+                    st.info("✅ Usunięcie zapisane w GitHubie.")
+                except Exception as e:
+                    st.warning(f"⚠️ Push nieudany: {e}")
+
+                st.success("✅ Zdjęcie zostało usunięte.")
+                st.session_state.galeria_index = max(0, index - 1)
+                st.experimental_rerun()
+        elif haslo:
+            st.error("❌ Nieprawidłowe hasło.")
+else:
+    st.info("📭 Brak zdjęć w galerii.")
+
+# === Dodaj nowe zdjęcie ===
+with st.expander("➕ Dodaj nowe zdjęcie do galerii"):
+    uploaded = st.file_uploader("📸 Wybierz zdjęcie", type=["png", "jpg", "jpeg"])
+    tytul = st.text_input("📝 Tytuł zdjęcia", max_chars=40)
+    data_zdjecia = st.date_input("📅 Data", value=date.today(), format="DD.MM.YYYY")
+
+    if uploaded and tytul:
+        filename = uploaded.name.replace(" ", "_")
+        save_path = os.path.join(GALERIA_DIR, filename)
+
+        # Zapisz plik
+        with open(save_path, "wb") as f:
+            f.write(uploaded.read())
+
+        # Dodaj do listy
         galeria.append({
-            "plik": nazwa_pliku,
-            "opis": opis,
+            "plik": filename,
+            "tytul": tytul,
             "data": data_zdjecia.strftime("%d.%m.%Y")
         })
-        with open(BAZA, "w") as f:
-            json.dump(galeria, f, indent=2)
 
-        push_to_github(BAZA, f"Dodano zdjęcie: {opis}")
-        st.success("✅ Zdjęcie dodane do galerii!")
+        # Zapisz JSON
+        with open(GALERIA_META, "w", encoding="utf-8") as f:
+            json.dump(galeria, f, indent=2, ensure_ascii=False)
 
-# === Filtrowanie ===
+        # Git push
+        try:
+            subprocess.run(["git", "add", "."], check=True)
+            subprocess.run(["git", "commit", "-m", f"Dodano zdjęcie {filename}"], check=True)
+            subprocess.run(["git", "push"], check=True)
+            st.info("🚀 Zdjęcie zapisane w GitHubie.")
+        except Exception as e:
+            st.warning(f"⚠️ Push nieudany: {e}")
+
+        st.success("✅ Zdjęcie zostało dodane.")
+        st.experimental_rerun()
+
+# === STOPKA ===
 st.markdown("---")
-st.subheader("🔍 Filtruj zdjęcia")
-
-unikalne_opisy = sorted(set([x["opis"] for x in galeria if x["opis"]]))
-wybor_opisu = st.selectbox("📌 Wybierz nazwę partii (lub zostaw puste):", ["Wszystkie"] + unikalne_opisy)
-
-filtruj_data = st.date_input("📅 Pokaż zdjęcia od tej daty:", value=None)
-
-filtered = galeria
-if wybor_opisu != "Wszystkie":
-    filtered = [x for x in filtered if x["opis"] == wybor_opisu]
-
-if filtruj_data:
-    filtruj_data_str = filtruj_data.strftime("%d.%m.%Y")
-    filtered = [x for x in filtered if x["data"] >= filtruj_data_str]
-
-# === Wyświetlanie ===
-st.markdown("---")
-st.subheader("🖼️ Zdjęcia")
-
-if filtered:
-    obrazy = []
-    for item in reversed(filtered):
-        sciezka = os.path.join(FOLDER, item["plik"])
-        if os.path.exists(sciezka):
-            obrazy.append((sciezka, f"{item['opis']} ({item['data']})", item["plik"]))
-
-    if obrazy:
-        if "current_slide" not in st.session_state:
-            st.session_state.current_slide = 0
-
-        col1, col2, col3 = st.columns([1, 6, 1])
-
-        with col1:
-            if st.button("⬅️"):
-                st.session_state.current_slide = max(0, st.session_state.current_slide - 1)
-
-        with col3:
-            if st.button("➡️"):
-                st.session_state.current_slide = min(len(obrazy) - 1, st.session_state.current_slide + 1)
-
-        current = st.session_state.current_slide
-        sciezka, podpis, plik = obrazy[current]
-        st.image(sciezka, caption=podpis, use_container_width=True)
-
-        with st.expander("🧹 Usuń to zdjęcie"):
-            haslo = st.text_input("Podaj hasło, aby usunąć zdjęcie", type="password")
-            if st.button("❌ Usuń zdjęcie"):
-                if haslo == "gorzelnia25":
-                    galeria = [x for x in galeria if x["plik"] != plik]
-                    with open(BAZA, "w") as f:
-                        json.dump(galeria, f, indent=2)
-                    os.remove(os.path.join(FOLDER, plik))
-                    push_to_github(BAZA, f"Usunięto zdjęcie: {plik}")
-                    st.success("🗑️ Zdjęcie zostało usunięte")
-                    st.session_state.current_slide = 0
-                    st.rerun()
-                else:
-                    st.error("❌ Niepoprawne hasło")
-else:
-    st.info("Brak zdjęć do wyświetlenia w wybranym zakresie.")
-#czy to zadziała?
+st.markdown("<p style='text-align:center;'>© 2025 <b>PWNTRIX</b> – Gorzelnia Kotłownia</p>", unsafe_allow_html=True)
