@@ -116,3 +116,4 @@ if filtered:
                     st.error("❌ Niepoprawne hasło")
 else:
     st.info("Brak zdjęć do wyświetlenia w wybranym zakresie.")
+#czy to zadziała?
