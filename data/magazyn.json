@@ -5,7 +5,7 @@
     "alk": "11%",
     "ml": 750,
     "ilosc": 10,
-    "smak": "P\u00f3\u0142s\u0142odkie",
+    "smak": "Półsłodkie",
     "drozdze": "La Mancha"
   },
   "Malina": {
@@ -13,17 +13,17 @@
     "rocznik": "04.2025",
     "alk": "11%",
     "ml": 750,
-    "ilosc": 10,
-    "smak": "P\u00f3\u0142s\u0142odkie",
+    "ilosc": 9,
+    "smak": "Półsłodkie",
     "drozdze": "La Mancha"
   },
-  "Dzika R\u00f3\u017ca": {
+  "Dzika Róża": {
     "img": "dzika_roza.jpg",
     "rocznik": "12.2024",
     "alk": "18%",
     "ml": 750,
     "ilosc": 10,
-    "smak": "P\u00f3\u0142s\u0142odkie",
+    "smak": "Półsłodkie",
     "drozdze": "M N"
   },
   "Hibiskus": {
@@ -32,7 +32,7 @@
     "alk": "18%",
     "ml": 750,
     "ilosc": 10,
-    "smak": "P\u00f3\u0142s\u0142odkie",
+    "smak": "Półsłodkie",
     "drozdze": "M N "
   }
 }
