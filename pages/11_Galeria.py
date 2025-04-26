@@ -148,3 +148,4 @@ with st.expander("➕ Dodaj nowe zdjęcie do galerii"):
 # === STOPKA ===
 st.markdown("---")
 st.markdown("<p style='text-align:center;'>© 2025 <b>PWNTRIX</b> – Gorzelnia Kotłownia</p>", unsafe_allow_html=True)
+#działa?
